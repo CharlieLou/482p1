@@ -16,6 +16,7 @@ void RequestLoan(State& state, String customer, unsigned int value){
 	lock.lock();
 	cv cv1;		
 	NUM++;
+	bank.signal();
 	while(!issafe(state,customer,value)){
 
 		customer_waiting.push(&cv1);
@@ -27,7 +28,7 @@ void RequestLoan(State& state, String customer, unsigned int value){
 
 	makeLoan(...);
 	NUM--;
-	bank.signal();
+
 	
 	lock.unlock();
 
@@ -58,22 +59,46 @@ void RepayBank( State& state, String customer, unsigned int value){
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 semaphore lock(1);
-semaphore ban
+semaphore bank(0);
 queue<semaphore*> waiting_queue;
 unsigned int NUM = 0;
 void RequestLoan(State& state, String customer, unsigned int value){
 	lock.down();
 	NUM++;
+	bank.up();
 	semaphore customer_loan(0);
 	while(!issafe(state,customer,value)){
 		waiting_queue.push(&customer_loan);
+		lock.up();
 		customer_loan.down();
+		lock.down();
 	}
-
+	lock.up();
+	
 	makeLoan(...);
+	
+	lock.down();
 	NUM--;	
+	lock.up();
 		
 
-	lock.up();
+	
+}
 
+void RepayBank( State& state, String customer, unsigned int value){
+	lock.down()
+	while(waiting_queue.empty()){
+		lock.up();
+		bank.down();	
+		lock.down();
+	}
+	acceptRepayment(...);
+	for(int i = 0; i < waiting_queue.size(); i++){
+		semaphore* s = waiting_queue.front();
+		waiting_queue.pop();
+		s->up();
+
+		thread_yield();
+	}	
+	lock.up();
 }
